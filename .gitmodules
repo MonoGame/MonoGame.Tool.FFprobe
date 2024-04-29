@@ -1,3 +1,15 @@
 [submodule "buildscripts"]
 	path = buildscripts
 	url = https://github.com/MonoGame/MonoGame.Tool.BuildScripts.git
+[submodule "ffmpeg"]
+	path = ffmpeg
+	url = https://github.com/ffmpeg/ffmpeg.git
+[submodule "vorbis"]
+	path = vorbis
+	url = https://gitlab.xiph.org/xiph/vorbis.git
+[submodule "ogg"]
+	path = ogg
+	url = https://gitlab.xiph.org/xiph/ogg.git
+[submodule "lame"]
+	path = lame
+	url = https://github.com/monogame/monogame.mirror.lame
