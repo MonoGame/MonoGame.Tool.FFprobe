@@ -64,13 +64,15 @@ public sealed class BuildMacOSTask : FrostingTask<BuildContext>
         };
 
         var configureFlags = GetFFMpegConfigureFlags(context, "osx-arm64");
-        var processSettings = new ProcessSettings();
+        var processSettings = new ProcessSettings
+        {
+            EnvironmentVariables = envVariables
+        };
 
         var shellCommandPath = "zsh";
 
         // Build libogg
         processSettings.WorkingDirectory = "./ogg";
-        processSettings.EnvironmentVariables = envVariables;
         processSettings.Arguments = $"-c \"make distclean\"";
         context.StartProcess(shellCommandPath, processSettings);
         processSettings.Arguments = $"-c \"./autogen.sh\"";
@@ -138,13 +140,15 @@ public sealed class BuildMacOSTask : FrostingTask<BuildContext>
         };
 
         var configureFlags = GetFFMpegConfigureFlags(context, "osx-x64");
-        var processSettings = new ProcessSettings();
+        var processSettings = new ProcessSettings
+        {
+            EnvironmentVariables = envVariables
+        };
 
         var shellCommandPath = "zsh";
 
         // Build libogg
         processSettings.WorkingDirectory = "./ogg";
-        processSettings.EnvironmentVariables = envVariables;
         processSettings.Arguments = $"-c \"make distclean\"";
         context.StartProcess(shellCommandPath, processSettings);
         processSettings.Arguments = $"-c \"./autogen.sh\"";
