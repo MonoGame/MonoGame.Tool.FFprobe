@@ -14,7 +14,7 @@ public sealed class BuildMacOSTask : FrostingTask<BuildContext>
         // There is an issue with the configure.ac script for mac where it uses the -force_cpusubtype_ALL flag which was
         // only valid for powerpc macs.  There is an issue opened at https://gitlab.xiph.org/xiph/vorbis/-/issues/2348
         // for reference.  For now, we'll just patch the flag out
-        context.StartProcess("patch", "./vorbis/configure.ac ./patches/001-libvorbis-remove-force_cpusubtype_ALL.patch");
+        context.ReplaceTextInFiles("./vorbis/configure.ac", "-force_cpusubtype_ALL", string.Empty);
 
         // Determine which mac architecture(s) to build for.
         var buildX64 = context.IsUniversalBinary || RuntimeInformation.ProcessArchitecture is not Architecture.Arm or Architecture.Arm64;
