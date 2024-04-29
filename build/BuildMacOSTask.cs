@@ -44,15 +44,6 @@ public sealed class BuildMacOSTask : FrostingTask<BuildContext>
         }
     }
 
-    public override void Finally(BuildContext context)
-    {
-        // Only need to revert patch when running locally and testing over and over.
-        if (context.BuildSystem().IsLocalBuild)
-        {
-            context.StartProcess("patch", "-R ./vorbis/configure.ac ./patches/001-libvorbis-remove-force_cpusubtype_ALL.patch");
-        }
-    }
-
     private static void BuildArm64(BuildContext context)
     {
         // Absolute path to the artifact directory is needed for flags since they don't allow relative path
