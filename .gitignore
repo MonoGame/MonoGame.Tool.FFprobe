@@ -405,3 +405,7 @@ artifacts/
 artifacts-*/
 
 .idea
+
+# Build dependencies
+dependencies-*/
+temp/
