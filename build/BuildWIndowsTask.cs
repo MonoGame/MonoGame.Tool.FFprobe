@@ -96,7 +96,7 @@ public sealed class BuildWindowsTask : FrostingTask<BuildContext>
 
     private static string GetFFProbConfigureFlags(BuildContext context)
     {
-        var ignoreCommentsAndNewLines = (string line) => !line.StartsWith('#') && !line.StartsWith(' ');
+        var ignoreCommentsAndNewLines = (string line) => !string.IsNullOrWhiteSpace(line) && !line.StartsWith('#');
         var configureFlags = context.FileReadLines("ffprobe.config").Where(ignoreCommentsAndNewLines);
         var osConfigureFlags = context.FileReadLines($"ffprobe.windows-x64.config").Where(ignoreCommentsAndNewLines);
         return string.Join(' ', configureFlags) + " " + string.Join(' ', osConfigureFlags);

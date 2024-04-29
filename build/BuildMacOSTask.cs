@@ -198,7 +198,7 @@ public sealed class BuildMacOSTask : FrostingTask<BuildContext>
 
     private static string GetFFMpegConfigureFlags(BuildContext context, string rid)
     {
-        var ignoreCommentsAndNewLines = (string line) => !line.StartsWith('#') && !line.StartsWith(' ');
+        var ignoreCommentsAndNewLines = (string line) => !string.IsNullOrWhiteSpace(line) && !line.StartsWith('#');
         var configureFlags = context.FileReadLines("ffprobe.config").Where(ignoreCommentsAndNewLines);
         var osConfigureFlags = context.FileReadLines($"ffprobe.{rid}.config").Where(ignoreCommentsAndNewLines);
         return string.Join(' ', configureFlags) + " " + string.Join(' ', osConfigureFlags);
