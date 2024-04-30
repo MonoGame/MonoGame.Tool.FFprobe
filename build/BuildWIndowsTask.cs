@@ -9,24 +9,96 @@ public sealed class BuildWindowsTask : FrostingTask<BuildContext>
 
     public override void Run(BuildContext context)
     {
-        //  Patch vcpkg files for windows build
-        context.StartProcess("patch", "./buildscripts/vcpkg/ports/ffmpeg/portfile.cmake ./patches/ffmpeg-portfile.patch");
-        context.StartProcess("patch", "./buildscripts/vcpkg/triplets/x64-windows-static.cmake ./patches/x64-windows-static-cmake.patch");
+        // Absolute path to the artifact directory is needed for flags since they don't allow relative path
+        var artifactDir = context.MakeAbsolute(new DirectoryPath(context.ArtifactsDir));
 
-        //  Bootstrap vcpkg
-        context.StartProcess("buildscripts/vcpkg/bootstrap-vcpkg.bat");
+        // The directory that all dependencies that are built manually are output too. Originally this was output to the
+        // artifacts directory but that started causing issues on the github runners, so it was moved back to the
+        // project root directory.
+        var dependencyDir = context.MakeAbsolute(new DirectoryPath($"{context.ArtifactsDir}/../dependencies-windows-x64"));
 
-        //  Perform x64-windows build
-        context.StartProcess("buildscripts/vcpkg/vcpkg.exe", "install ffmpeg[mp3lame,vorbis]:x64-windows-static");
+        // For Windows build, since we're using  mingw environment, we can't set environment variables as normal
+        // since they would be set for the Windows side of things and not the mingw environment that everything is
+        // running in.  Instead, we'll build an export statement that can be used at the start of every process call to
+        // ensure the correct environment variables are set for each command executed.
+        var cFlagsExport = "export CFLAGS=\"-w\";";
+        var ccFlagsExport = "export CCFLAGS=\"x86_64-w64-mingw32-gcc\";";
+        var ldFlagsExport = "export LDFLAGS=\"--static\";";
+        var pathExport = "export PATH=\"/usr/bin:/mingw64/bin:$PATH\";";
+        var pkgConfigExport = $"export PKG_CONFIG_PATH=\"/mingw64/lib/pkgconfig:$PKG_CONFIG_PATH\";";
+        var exports = $"{pathExport}{cFlagsExport}{ccFlagsExport}{ldFlagsExport}{pkgConfigExport}";
 
-        //  Copy build to artifacts
-        context.CopyFile("buildscripts/vcpkg/installed/x64-windows-static/tools/ffmpeg/ffprobe.exe", $"{context.ArtifactsDir}/ffprobe.exe");
+        // The --prefix flag used for all ./configure commands to ensure that build dependencies are output to the
+        // dependency directory specified
+        var prefixFlag = $"--prefix=\"{dependencyDir}\"";
+
+        // The --bindir flag used in the final ffprobe build so that the binary is output to the artifacts directory.
+        var binDirFlag = $"--bindir=\"{artifactDir}\"";
+
+        // Get the FFProbe ./configure flags specific for this windows build
+        var configureFlags = GetFFProbConfigureFlags(context);
+
+        // The command to execute in order to run the shell environment (mingw) needed for this build.
+        var shellCommandPath = @"C:\msys64\usr\bin\bash.exe";
+
+        // Reusuable process settings instance. As each dependency is built, we'll adjust the working directory and
+        // arguments of this instance for each command.
+        var processSettings = new ProcessSettings();
+
+        // Build libogg
+        processSettings.WorkingDirectory = "./ogg";
+        processSettings.Arguments = $"-c \"{exports} make distclean\"";
+        context.StartProcess(shellCommandPath, processSettings);
+        processSettings.Arguments = $"-c \"{exports} ./autogen.sh\"";
+        context.StartProcess(shellCommandPath, processSettings);
+        processSettings.Arguments = $"-c \"{exports} ./configure --disable-shared {prefixFlag}\"";
+        context.StartProcess(shellCommandPath, processSettings);
+        processSettings.Arguments = $"-c \"{exports} make -j{Environment.ProcessorCount}\"";
+        context.StartProcess(shellCommandPath, processSettings);
+        processSettings.Arguments = $"-c \"{exports} make install\"";
+        context.StartProcess(shellCommandPath, processSettings);
+
+        // build libvorbis
+        processSettings.WorkingDirectory = "./vorbis";
+        processSettings.Arguments = $"-c \"{exports} make distclean\"";
+        context.StartProcess(shellCommandPath, processSettings);
+        processSettings.Arguments = $"-c \"{exports} ./autogen.sh\"";
+        context.StartProcess(shellCommandPath, processSettings);
+        processSettings.Arguments = $"-c \"{exports} ./configure --disable-examples --disable-docs --disable-shared {prefixFlag}\"";
+        context.StartProcess(shellCommandPath, processSettings);
+        processSettings.Arguments = $"-c \"{exports} make -j{Environment.ProcessorCount}\"";
+        context.StartProcess(shellCommandPath, processSettings);
+        processSettings.Arguments = $"-c \"{exports} make install\"";
+        context.StartProcess(shellCommandPath, processSettings);
+
+        // build lame
+        processSettings.WorkingDirectory = "./lame";
+        processSettings.Arguments = $"-c \"{exports} make distclean\"";
+        context.StartProcess(shellCommandPath, processSettings);
+        processSettings.Arguments = $"-c \"{exports} ./configure --disable-frontend --disable-decoder --disable-shared {prefixFlag}\"";
+        context.StartProcess(shellCommandPath, processSettings);
+        processSettings.Arguments = $"-c \"{exports} make -j{Environment.ProcessorCount}\"";
+        context.StartProcess(shellCommandPath, processSettings);
+        processSettings.Arguments = $"-c \"{exports} make install\"";
+        context.StartProcess(shellCommandPath, processSettings);
+
+        // Build ffprobe
+        processSettings.WorkingDirectory = "./ffmpeg";
+        processSettings.Arguments = $"-c \"{exports} make distclean\"";
+        context.StartProcess(shellCommandPath, processSettings);
+        processSettings.Arguments = $"-c \"{exports} ./configure {binDirFlag} {configureFlags}\"";
+        context.StartProcess(shellCommandPath, processSettings);
+        processSettings.Arguments = $"-c \"{exports} make -j{Environment.ProcessorCount}\"";
+        context.StartProcess(shellCommandPath, processSettings);
+        processSettings.Arguments = $"-c \"{exports} make install\"";
+        context.StartProcess(shellCommandPath, processSettings);
     }
 
-    public override void Finally(BuildContext context)
+    private static string GetFFProbConfigureFlags(BuildContext context)
     {
-        //  Ensure we revert the patched files so when running/testing locally they are put back in original state
-        context.StartProcess("patch", "-R ./buildscripts/vcpkg/ports/ffmpeg/portfile.cmake ./patches/ffmpeg-portfile.patch");
-        context.StartProcess("patch", "-R ./buildscripts/vcpkg/triplets/x64-windows-static.cmake ./patches/x64-windows-static-cmake.patch");
+        var ignoreCommentsAndNewLines = (string line) => !string.IsNullOrWhiteSpace(line) && !line.StartsWith('#');
+        var configureFlags = context.FileReadLines("ffprobe.config").Where(ignoreCommentsAndNewLines);
+        var osConfigureFlags = context.FileReadLines($"ffprobe.windows-x64.config").Where(ignoreCommentsAndNewLines);
+        return string.Join(' ', configureFlags) + " " + string.Join(' ', osConfigureFlags);
     }
 }

@@ -9,24 +9,83 @@ public sealed class BuildLinuxTask : FrostingTask<BuildContext>
 
     public override void Run(BuildContext context)
     {
-        //  Patch vcpkg files for linux build
-        context.StartProcess("patch", "./buildscripts/vcpkg/ports/ffmpeg/portfile.cmake ./patches/ffmpeg-portfile.patch");
-        context.StartProcess("patch", "./buildscripts/vcpkg/triplets/x64-linux.cmake ./patches/x64-linux-cmake.patch");
+        // Absolute path to the artifact directory is needed for flags since they don't allow relative path
+        var artifactDir = context.MakeAbsolute(new DirectoryPath(context.ArtifactsDir));
+        var dependencyDir = context.MakeAbsolute(new DirectoryPath($"{context.ArtifactsDir}/../dependencies-linux-x64"));
+        var prefixFlag = $"--prefix=\"{dependencyDir}\"";
+        var hostFlag = "--host=\"x86_64-linux-gnu\"";
+        var binDirFlag = $"--bindir=\"{artifactDir}\"";
 
-        //  Bootstrap vcpkg
-        context.StartProcess("buildscripts/vcpkg/bootstrap-vcpkg.sh");
+        var envVariables = new Dictionary<string, string>
+        {
+            {"CFLAGS", $"-w -I{dependencyDir}/include"},
+            {"CPPFLAGS", $"-I{dependencyDir}/include"},
+            {"LDFLAGS", $"--static -L{dependencyDir}/lib"},
+            {"PKG_CONFIG_PATH", $"{dependencyDir}/lib/pkgconfig"}
+        };
 
-        //  Perform x64-linux build
-        context.StartProcess("buildscripts/vcpkg/vcpkg", "install ffmpeg[mp3lame,vorbis]:x64-linux");
+        var configureFlags = GetFFMpegConfigureFlags(context);
+        var processSettings = new ProcessSettings
+        {
+            EnvironmentVariables = envVariables
+        };
 
-        //  Copy build to artifacts
-        context.CopyFile("buildscripts/vcpkg/installed/x64-linux/tools/ffmpeg/ffprobe", $"{context.ArtifactsDir}/ffprobe");
+        var shellCommandPath = "sh";
+
+        // Build libogg
+        processSettings.WorkingDirectory = "./ogg";
+        processSettings.Arguments = $"-c \"make distclean\"";
+        context.StartProcess(shellCommandPath, processSettings);
+        processSettings.Arguments = $"-c \"./autogen.sh\"";
+        context.StartProcess(shellCommandPath, processSettings);
+        processSettings.Arguments = $"-c \"./configure --disable-shared {prefixFlag} {hostFlag}\"";
+        context.StartProcess(shellCommandPath, processSettings);
+        processSettings.Arguments = $"-c \"make -j{Environment.ProcessorCount}\"";
+        context.StartProcess(shellCommandPath, processSettings);
+        processSettings.Arguments = $"-c \"make install\"";
+        context.StartProcess(shellCommandPath, processSettings);
+
+        // build libvorbis
+        processSettings.WorkingDirectory = "./vorbis";
+        processSettings.Arguments = $"-c \"make distclean\"";
+        context.StartProcess(shellCommandPath, processSettings);
+        processSettings.Arguments = $"-c \"./autogen.sh\"";
+        context.StartProcess(shellCommandPath, processSettings);
+        processSettings.Arguments = $"-c \"./configure --disable-examples --disable-docs --disable-shared {prefixFlag} {hostFlag}\"";
+        context.StartProcess(shellCommandPath, processSettings);
+        processSettings.Arguments = $"-c \"make -j{Environment.ProcessorCount}\"";
+        context.StartProcess(shellCommandPath, processSettings);
+        processSettings.Arguments = $"-c \"make install\"";
+        context.StartProcess(shellCommandPath, processSettings);
+
+        // build lame
+        processSettings.WorkingDirectory = "./lame";
+        processSettings.Arguments = $"-c \"make distclean\"";
+        context.StartProcess(shellCommandPath, processSettings);
+        processSettings.Arguments = $"-c \"./configure --disable-frontend --disable-decoder --disable-shared {prefixFlag} {hostFlag}\"";
+        context.StartProcess(shellCommandPath, processSettings);
+        processSettings.Arguments = $"-c \"make -j{Environment.ProcessorCount}\"";
+        context.StartProcess(shellCommandPath, processSettings);
+        processSettings.Arguments = $"-c \"make install\"";
+        context.StartProcess(shellCommandPath, processSettings);
+
+        // Build ffprobe
+        processSettings.WorkingDirectory = "./ffmpeg";
+        processSettings.Arguments = $"-c \"make distclean\"";
+        context.StartProcess(shellCommandPath, processSettings);
+        processSettings.Arguments = $"-c \"./configure {binDirFlag} {configureFlags}\"";
+        context.StartProcess(shellCommandPath, processSettings);
+        processSettings.Arguments = $"-c \"make -j{Environment.ProcessorCount}\"";
+        context.StartProcess(shellCommandPath, processSettings);
+        processSettings.Arguments = $"-c \"make install\"";
+        context.StartProcess(shellCommandPath, processSettings);
     }
 
-    public override void Finally(BuildContext context)
+    private static string GetFFMpegConfigureFlags(BuildContext context)
     {
-        //  Ensure we revert the patched files so when running/testing locally they are put back in original state
-        context.StartProcess("patch", "-R ./buildscripts/vcpkg/ports/ffmpeg/portfile.cmake ./patches/ffmpeg-portfile.patch");
-        context.StartProcess("patch", "-R ./buildscripts/vcpkg/triplets/x64-linux.cmake ./patches/x64-linux-cmake.patch");
+        var ignoreCommentsAndNewLines = (string line) => !string.IsNullOrWhiteSpace(line) && !line.StartsWith('#');
+        var configureFlags = context.FileReadLines("ffprobe.config").Where(ignoreCommentsAndNewLines);
+        var osConfigureFlags = context.FileReadLines($"ffprobe.linux-x64.config").Where(ignoreCommentsAndNewLines);
+        return string.Join(' ', configureFlags) + " " + string.Join(' ', osConfigureFlags);
     }
 }

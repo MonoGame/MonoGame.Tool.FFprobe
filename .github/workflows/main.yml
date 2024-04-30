@@ -9,7 +9,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
+        os: [windows-latest, ubuntu-latest, macos-latest]
       fail-fast: false
     steps:
       - name: Expose GitHub Runtime
@@ -17,12 +17,18 @@ jobs:
 
       - name: Install Mac Dependencies
         if: runner.os == 'macOS'
-        run: brew install nasm
+        run: |
+          brew install nasm autoconf automake libtool
 
       - name: Install Linux Dependencies
         if: runner.os == 'Linux'
-        run: sudo apt-get install nasm
+        run: sudo apt-get install nasm autoconf automake libtool
 
+      - name: Install Windows Dependencies
+        if: runner.os == 'Windows'
+        shell: bash
+        run:  |
+          C:\\msys64\\usr\\bin\\bash.exe -c 'export PATH="/usr/bin:/mingw64/bin:$PATH"; pacman -S --needed --noconfirm mingw-w64-x86_64-toolchain mingw-w64-x86_64-mpg123 mingw-w64-x86_64-gtk2 mingw-w64-x86_64-libogg mingw-w64-x86_64-libvorbis mingw-w64-x86_64-lame mingw-w64-x86_64-pkg-config nasm yasm make base-devel autoconf automake libtool'
       - name: Clone repository
         uses: actions/checkout@v4
         with:
@@ -33,6 +39,7 @@ jobs:
         env:
           ACTIONS_RUNTIME_TOKEN: ${{ env.ACTIONS_RUNTIME_TOKEN }}
           ACTIONS_RUNTIME_URL: "${{ env.ACTIONS_RUNTIME_URL }}"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     
   deploy:
     name: deploy
@@ -51,8 +58,11 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Rename License File
+        run: mv ./ffmpeg/COPYING.GPLv2 ./ffmpeg/LICENSE          
+
       - name: Run CAKE
-        run: dotnet run --project ./build/Build.csproj -- --target=Package --universalBinary=true --toolname=FFprobe --executablename=ffprobe --commandname=mgcb-ffprobe --licensepath=ffprobe/LICENSE
+        run: dotnet run --project ./build/Build.csproj -- --target=Package --universalBinary=true --toolname=FFprobe --executablename=ffprobe --commandname=mgcb-ffprobe --licensepath=ffmpeg/LICENSE
         env:
           ACTIONS_RUNTIME_TOKEN: ${{ env.ACTIONS_RUNTIME_TOKEN }}
           ACTIONS_RUNTIME_URL: "${{ env.ACTIONS_RUNTIME_URL }}"
