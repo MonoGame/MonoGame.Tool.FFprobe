@@ -35,7 +35,7 @@ public sealed class BuildWindowsTask : FrostingTask<BuildContext>
         // The --bindir flag used in the final ffprobe build so that the binary is output to the artifacts directory.
         var binDirFlag = $"--bindir=\"{artifactDir}\"";
 
-        // Get the FFProbe ./configure flags specific for this windows build
+        // Get the FFprobe ./configure flags specific for this windows build
         var configureFlags = GetFFProbConfigureFlags(context);
 
         // The command to execute in order to run the shell environment (mingw) needed for this build.
