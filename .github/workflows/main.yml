@@ -72,9 +72,9 @@ jobs:
         if: github.ref_type == 'tag'
         uses: ncipollo/release-action@v1
         with:
-          name: 'MonoGame.Library.FreeType ${{ github.ref_name }}'
+          name: 'MonoGame.Tool.FFprobe ${{ github.ref_name }}'
           tag: ${{ github.ref_name }}
           allowUpdates: true
           removeArtifacts: true
-          artifacts: "bin/Release/*.nupkg"
+          artifacts: "artifacts/**/*.nupkg"
           token: ${{ secrets.GITHUB_TOKEN }}
