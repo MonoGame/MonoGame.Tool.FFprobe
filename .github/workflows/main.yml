@@ -62,7 +62,7 @@ jobs:
         run: mv ./ffmpeg/COPYING.GPLv2 ./ffmpeg/LICENSE          
 
       - name: Run CAKE
-        run: dotnet run --project ./build/Build.csproj -- --target=Package --universalBinary=true --toolname=FFprobe --executablename=ffprobe --commandname=mgcb-ffprobe --licensepath=ffmpeg/LICENSE
+        run: dotnet run --project ./build/Build.csproj -- --target=Package --universalBinary=true --toolname=FFprobe --executablename=ffprobe --licensepath=ffmpeg/LICENSE
         env:
           ACTIONS_RUNTIME_TOKEN: ${{ env.ACTIONS_RUNTIME_TOKEN }}
           ACTIONS_RUNTIME_URL: "${{ env.ACTIONS_RUNTIME_URL }}"
