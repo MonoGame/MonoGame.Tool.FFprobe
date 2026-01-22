@@ -56,10 +56,10 @@ public sealed class BuildMacOSTask : FrostingTask<BuildContext>
 
         var envVariables = new Dictionary<string, string>
         {
-            {"CFLAGS", $"-w -arch arm64 -I{dependencyDir}/include"},
-            {"CPPFLAGS", $"-arch arm64 -I{dependencyDir}/include"},
-            {"CXXFLAGS", "-arch arm64"},
-            {"LDFLAGS", $"-arch arm64 -L{dependencyDir}/lib"},
+            {"CFLAGS", $"-mmacosx-version-min=10.5 -w -arch arm64 -I{dependencyDir}/include"},
+            {"CPPFLAGS", $"-mmacosx-version-min=10.5 -arch arm64 -I{dependencyDir}/include"},
+            {"CXXFLAGS", "-mmacosx-version-min=10.5 -arch arm64"},
+            {"LDFLAGS", $"-mmacosx-version-min=10.5 -arch arm64 -L{dependencyDir}/lib"},
             {"PKG_CONFIG_PATH", $"{dependencyDir}/lib/pkgconfig"}
         };
 
@@ -132,10 +132,10 @@ public sealed class BuildMacOSTask : FrostingTask<BuildContext>
 
         var envVariables = new Dictionary<string, string>
         {
-            {"CFLAGS", $"-w -arch x86_64 -I{dependencyDir}/include"},
-            {"CPPFLAGS", $"-arch x86_64 -I{dependencyDir}/include"},
-            {"CXXFLAGS", "-arch x86_64"},
-            {"LDFLAGS", $"-arch x86_64 -L{dependencyDir}/lib"},
+            {"CFLAGS", $"-mmacosx-version-min=10.5 -w -arch x86_64 -I{dependencyDir}/include"},
+            {"CPPFLAGS", $"-mmacosx-version-min=10.5 -arch x86_64 -I{dependencyDir}/include"},
+            {"CXXFLAGS", "-mmacosx-version-min=10.5 -arch x86_64"},
+            {"LDFLAGS", $"-mmacosx-version-min=10.5 -arch x86_64 -L{dependencyDir}/lib"},
             {"PKG_CONFIG_PATH", $"{dependencyDir}/lib/pkgconfig"}
         };
 
