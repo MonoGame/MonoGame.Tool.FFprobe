@@ -11,8 +11,8 @@ public sealed class BuildLinuxTask : FrostingTask<BuildContext>
     {
         // Absolute path to the artifact directory is needed for flags since they don't allow relative path
         var arch = RuntimeInformation.OSArchitecture;
-        var artifactDir = context.MakeAbsolute(new DirectoryPath(context.ArtifactsDir));
-        var dependencyDir = context.MakeAbsolute(new DirectoryPath($"{context.ArtifactsDir}/../dependencies-linux-{(arch == Architecture.Arm64 ? "arm64" : "x64")}"));
+        var artifactDir = context.MakeAbsoluteForDocker(new DirectoryPath(context.ArtifactsDir));
+        var dependencyDir = context.MakeAbsoluteForDocker(new DirectoryPath($"{context.ArtifactsDir}/../dependencies-linux-{(arch == Architecture.Arm64 ? "arm64" : "x64")}"));
         var prefixFlag = $"--prefix=\"{dependencyDir}\"";
         var hostFlag = arch == Architecture.Arm64 ? "--host=\"aarch64-linux-gnu\"" : "--host=\"x86_64-linux-gnu\"";
         var binDirFlag = $"--bindir=\"{artifactDir}\"";
@@ -36,50 +36,50 @@ public sealed class BuildLinuxTask : FrostingTask<BuildContext>
         // Build libogg
         processSettings.WorkingDirectory = "./ogg";
         processSettings.Arguments = $"-c \"make distclean\"";
-        context.StartProcess(shellCommandPath, processSettings);
+        context.StartProcessWithDocker(shellCommandPath, processSettings);
         processSettings.Arguments = $"-c \"./autogen.sh\"";
-        context.StartProcess(shellCommandPath, processSettings);
+        context.StartProcessWithDocker(shellCommandPath, processSettings);
         processSettings.Arguments = $"-c \"./configure --disable-shared {prefixFlag} {hostFlag}\"";
-        context.StartProcess(shellCommandPath, processSettings);
+        context.StartProcessWithDocker(shellCommandPath, processSettings);
         processSettings.Arguments = $"-c \"make -j{Environment.ProcessorCount}\"";
-        context.StartProcess(shellCommandPath, processSettings);
+        context.StartProcessWithDocker(shellCommandPath, processSettings);
         processSettings.Arguments = $"-c \"make install\"";
-        context.StartProcess(shellCommandPath, processSettings);
+        context.StartProcessWithDocker(shellCommandPath, processSettings);
 
         // build libvorbis
         processSettings.WorkingDirectory = "./vorbis";
         processSettings.Arguments = $"-c \"make distclean\"";
-        context.StartProcess(shellCommandPath, processSettings);
+        context.StartProcessWithDocker(shellCommandPath, processSettings);
         processSettings.Arguments = $"-c \"./autogen.sh\"";
-        context.StartProcess(shellCommandPath, processSettings);
+        context.StartProcessWithDocker(shellCommandPath, processSettings);
         processSettings.Arguments = $"-c \"./configure --disable-examples --disable-docs --disable-shared {prefixFlag} {hostFlag}\"";
-        context.StartProcess(shellCommandPath, processSettings);
+        context.StartProcessWithDocker(shellCommandPath, processSettings);
         processSettings.Arguments = $"-c \"make -j{Environment.ProcessorCount}\"";
-        context.StartProcess(shellCommandPath, processSettings);
+        context.StartProcessWithDocker(shellCommandPath, processSettings);
         processSettings.Arguments = $"-c \"make install\"";
-        context.StartProcess(shellCommandPath, processSettings);
+        context.StartProcessWithDocker(shellCommandPath, processSettings);
 
         // build lame
         processSettings.WorkingDirectory = "./lame";
         processSettings.Arguments = $"-c \"make distclean\"";
-        context.StartProcess(shellCommandPath, processSettings);
+        context.StartProcessWithDocker(shellCommandPath, processSettings);
         processSettings.Arguments = $"-c \"./configure --disable-frontend --disable-decoder --disable-shared {prefixFlag} {hostFlag}\"";
-        context.StartProcess(shellCommandPath, processSettings);
+        context.StartProcessWithDocker(shellCommandPath, processSettings);
         processSettings.Arguments = $"-c \"make -j{Environment.ProcessorCount}\"";
-        context.StartProcess(shellCommandPath, processSettings);
+        context.StartProcessWithDocker(shellCommandPath, processSettings);
         processSettings.Arguments = $"-c \"make install\"";
-        context.StartProcess(shellCommandPath, processSettings);
+        context.StartProcessWithDocker(shellCommandPath, processSettings);
 
         // Build ffprobe
         processSettings.WorkingDirectory = "./ffmpeg";
         processSettings.Arguments = $"-c \"make distclean\"";
-        context.StartProcess(shellCommandPath, processSettings);
+        context.StartProcessWithDocker(shellCommandPath, processSettings);
         processSettings.Arguments = $"-c \"./configure {binDirFlag} {configureFlags}\"";
-        context.StartProcess(shellCommandPath, processSettings);
+        context.StartProcessWithDocker(shellCommandPath, processSettings);
         processSettings.Arguments = $"-c \"make -j{Environment.ProcessorCount}\"";
-        context.StartProcess(shellCommandPath, processSettings);
+        context.StartProcessWithDocker(shellCommandPath, processSettings);
         processSettings.Arguments = $"-c \"make install\"";
-        context.StartProcess(shellCommandPath, processSettings);
+        context.StartProcessWithDocker(shellCommandPath, processSettings);
     }
 
     private static string GetFFMpegConfigureFlags(BuildContext context)
